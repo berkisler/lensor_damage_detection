@@ -36,3 +36,8 @@ The project folder structure
 - `/build/` - Directory for build output (usually not checked into version control).
 
 ---
+## Notes
+Creating the conda environment and installing dependencies
+Talk about adding the python path
+### Dataset Module
+- Transformation: why and where to use which
