@@ -1,0 +1,9 @@
+name: lensor_detection
+channels:
+  - defaults
+  - conda-forge
+  -  pip
+dependencies:
+  - python=3.9  # Specify the version of Python you want.
+
+
