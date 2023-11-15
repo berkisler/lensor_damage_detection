@@ -9,3 +9,4 @@
   torchaudio
   opencv-python
   pycocotools
+  tqdm
