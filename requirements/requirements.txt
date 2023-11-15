@@ -8,3 +8,5 @@
   torchvision
   torchaudio
   opencv-python
+  pycocotools
+  tqdm
