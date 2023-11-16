@@ -28,9 +28,9 @@ class CustomObjectDetector:
         self.model.roi_heads.box_predictor = torchvision.models.detection.faster_rcnn.FastRCNNPredictor(in_features,
                                                                                                         num_classes + 1)
 
-        # Create a custom anchor generator for the RPN
+        # # Create a custom anchor generator for the RPN
         anchor_sizes = ((16,), (32,), (64,), (128,), (256,))  # Adjust as needed
-        aspect_ratios = ((0.5, 1.0, 2.0, 4.0),) * len(anchor_sizes)
+        aspect_ratios = ((0.5, 1.0, 2.0),) * len(anchor_sizes)
         self.model.rpn.anchor_generator = AnchorGenerator(sizes=anchor_sizes, aspect_ratios=aspect_ratios)
 
         self.device = device if device else torch.device("cuda:0" if torch.cuda.is_available() else "cpu")

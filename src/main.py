@@ -74,4 +74,4 @@ def main(dataset_check=True):
 
 
 if __name__ == '__main__':
-    main(dataset_check=False)
+    main(dataset_check=True)
