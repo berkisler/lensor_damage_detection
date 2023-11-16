@@ -62,7 +62,7 @@ def main(dataset_check=True):
                                                    gamma=LR_SCHED_GAMMA)
 
     train_metrics = detector.train_model(train_ds_loader, optimizer, lr_scheduler, num_epochs=1,
-                                         val_dataloader=val_ds_loader, )
+                                         res_path=result_path, val_dataloader=val_ds_loader)
     # Save train/val dictionary as a JSON file
     with open(os.path.join(result_path, 'train_results/train_metrics.json'), 'w') as tr_json_file:
         json.dump(train_metrics, tr_json_file)
@@ -74,4 +74,4 @@ def main(dataset_check=True):
 
 
 if __name__ == '__main__':
-    main()
+    main(dataset_check=False)
