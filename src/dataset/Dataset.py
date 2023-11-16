@@ -1,7 +1,5 @@
 from torchvision.datasets import CocoDetection
-import torchvision.transforms as transforms
 from torchvision.transforms import v2
-from torchvision.transforms import functional as F
 from torch.utils.data import DataLoader
 import torch
 from utils.Datautil import custom_collate_fn, convert_coco_format_to_pascal_voc
@@ -51,6 +49,7 @@ class CustomCocoDataset(CocoDetection):
         labels = []
         masks = []  # Only used if task is 'segmentation'
         image_id = annotations[0]['image_id'] if annotations else -1
+        img_w, img_h = img.size
 
         for ann in annotations:
             # Extract label
@@ -102,7 +101,7 @@ class CustomCocoDataset(CocoDetection):
                 v2.RandomRotation(15),
                 v2.ToTensor(),
                 v2.Normalize(mean=norm_mean, std=norm_std)
-            ])
+                ])
         else:
             # Transforms for validation/testing
             return v2.Compose([

@@ -29,7 +29,7 @@ class CustomObjectDetector:
                                                                                                         num_classes + 1)
 
         # # Create a custom anchor generator for the RPN
-        anchor_sizes = ((16,), (32,), (64,), (128,), (256,))  # Adjust as needed
+        anchor_sizes = ((8,), (16,), (32,), (64,), (128,))  # Adjust as needed
         aspect_ratios = ((0.5, 1.0, 2.0),) * len(anchor_sizes)
         self.model.rpn.anchor_generator = AnchorGenerator(sizes=anchor_sizes, aspect_ratios=aspect_ratios)
 

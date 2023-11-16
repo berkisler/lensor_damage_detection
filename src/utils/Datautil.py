@@ -193,6 +193,7 @@ def analyze_dataset(dataset_path, annotation_file):
     widths = []
     heights = []
     aspect_ratios = []
+    areas = []
 
     for _, targets in dataset:
         for target in targets:
@@ -200,10 +201,16 @@ def analyze_dataset(dataset_path, annotation_file):
             # COCO format: [xmin, ymin, width, height]
             width = bbox[2]
             height = bbox[3]
+            area = width * height
 
             widths.append(width)
             heights.append(height)
+            areas.append(area)
             aspect_ratios.append(width / height if height > 0 else 0)
+
+    # Computing max and min areas
+    max_area, min_area = max(areas), min(areas)
+    print('max_area: ', max_area, 'min_area: ', min_area)
 
     # Plotting
     plt.figure(figsize=(12, 6))
