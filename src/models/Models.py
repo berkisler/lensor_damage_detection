@@ -2,10 +2,12 @@ import logging
 from collections import defaultdict
 import torch
 import torchvision
+from torchvision.models.detection.rpn import AnchorGenerator
 from tqdm import tqdm
 from utils.Modelutil import calculate_metrics, tensor_to_list, save_best_model
-import ipdb
+import os
 import numpy as np
+
 
 
 def setup_logger():
@@ -25,6 +27,11 @@ class CustomObjectDetector:
         in_features = self.model.roi_heads.box_predictor.cls_score.in_features
         self.model.roi_heads.box_predictor = torchvision.models.detection.faster_rcnn.FastRCNNPredictor(in_features,
                                                                                                         num_classes + 1)
+
+        # Create a custom anchor generator for the RPN
+        anchor_sizes = ((16,), (32,), (64,), (128,), (256,))  # Adjust as needed
+        aspect_ratios = ((0.5, 1.0, 2.0, 4.0),) * len(anchor_sizes)
+        self.model.rpn.anchor_generator = AnchorGenerator(sizes=anchor_sizes, aspect_ratios=aspect_ratios)
 
         self.device = device if device else torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -109,7 +116,7 @@ class CustomObjectDetector:
 
         return eval_metrics
 
-    def train_model(self, dataloader, optimizer, lr_scheduler, num_epochs, val_dataloader=None):
+    def train_model(self, dataloader, optimizer, lr_scheduler, num_epochs, res_path, val_dataloader=None):
 
         """
         Trains the model, with an option to validate.
@@ -119,10 +126,10 @@ class CustomObjectDetector:
             optimizer (Optimizer): Optimizer for the model.
             lr_scheduler (lr_scheduler): Learning rate scheduler for the model
             num_epochs (int): Number of epochs to train.
+            res_path (str): The path to save the model weights
             val_dataloader (DataLoader, optional): Dataloader for the validation data.
         """
         logging.info('<<<<<<<<<<Training started>>>>>>>>>>')
-        eval_metrics = self.evaluate_model('val', val_dataloader)
         all_metrics = defaultdict(dict)
         best_val_loss = float('inf')  # Initialize with a large number for loss minimization
 
@@ -186,8 +193,11 @@ class CustomObjectDetector:
 
                 all_metrics[f'epoch_{epoch}']['val'] = eval_metrics
 
+            # Calculate the mean loss on eval set to track best performing model
             val_loss = np.mean(eval_metrics['val_loss'])
+
             # Save model if it's the best so far
-            best_val_loss = save_best_model(self.model, val_loss, best_val_loss, filename='best_model.pth', mode='min')
+            file_path = os.path.join(res_path, 'model_weights/best_model.pth')
+            best_val_loss = save_best_model(self.model, val_loss, best_val_loss, filename=file_path, mode='min')
 
         return all_metrics

@@ -97,19 +97,20 @@ class CustomCocoDataset(CocoDetection):
         if train:
             # Example of adding more transforms for training
             return v2.Compose([
-                v2.Resize(640),
-                v2.RandomHorizontalFlip(),
-                # v2.ColorJitter(brightness=0.1, contrast=0.1, saturation=0.1, hue=0.1),
+                v2.ToImage(),
+                v2.RandomIoUCrop(),
+                v2.RandomHorizontalFlip(p=1),
+                v2.SanitizeBoundingBoxes(),
                 v2.RandomRotation(15),
-                v2.ToTensor(),
-                #v2.Normalize(mean=norm_mean, std=norm_std)
+                v2.ToDtype(torch.float32, scale=True),
+                v2.Normalize(mean=norm_mean, std=norm_std)
             ])
         else:
             # Transforms for validation/testing
             return v2.Compose([
-                v2.Resize(640),
-                v2.ToTensor(),
-                # v2.Normalize(mean=norm_mean, std=norm_std)
+                v2.ToImage(),
+                v2.ToDtype(torch.float32, scale=True),
+                v2.Normalize(mean=norm_mean, std=norm_std)
             ])
 
 

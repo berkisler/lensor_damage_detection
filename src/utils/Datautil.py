@@ -2,7 +2,9 @@ import torch
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import torchvision.transforms.functional as F
+from torchvision.datasets import CocoDetection
 import itertools
+
 
 def convert_coco_format_to_pascal_voc(coco_boxes):
     """
@@ -111,8 +113,11 @@ def visualize_sample(dataloader):
     """
     try:
         while True:
-            print("Looping... Press Ctrl+C to stop.")
+            print("\n Entering data check... type 'done' to stop.")
             idx = input('Provide the sample id: ')
+            if idx.lower() == 'done':
+                print('Exiting data check.')
+                return
             num_samples = len(dataloader.dataset)
             # Get a single batch from the dataloader
             if not idx:
@@ -132,6 +137,8 @@ def visualize_sample(dataloader):
             target = targets[0]  # Get the first target from the batch
             im_id = target['image_id']
             print(f'Image ID" {im_id}')
+            print(f"{type(image) = }\n{type(target) = }\n{target.keys() = }")
+            print(f"{type(target['boxes']) = }\n{type(target['labels']) = }")
 
             # Convert tensor to PIL Image if necessary
             if isinstance(image, torch.Tensor):
@@ -170,3 +177,48 @@ def visualize_sample(dataloader):
         print("Reached the end of the dataset.")
 
 
+def analyze_dataset(dataset_path, annotation_file):
+    """
+    Analyze the dataset to determine appropriate anchor sizes and aspect ratios.
+
+    Parameters:
+        dataset_path (str): Path to the dataset directory.
+        annotation_file (str): Path to the annotation file.
+
+    Returns:
+        A plot of the distribution of bounding box sizes and aspect ratios.
+    """
+    dataset = CocoDetection(root=dataset_path, annFile=annotation_file)
+
+    widths = []
+    heights = []
+    aspect_ratios = []
+
+    for _, targets in dataset:
+        for target in targets:
+            bbox = target['bbox']
+            # COCO format: [xmin, ymin, width, height]
+            width = bbox[2]
+            height = bbox[3]
+
+            widths.append(width)
+            heights.append(height)
+            aspect_ratios.append(width / height if height > 0 else 0)
+
+    # Plotting
+    plt.figure(figsize=(12, 6))
+
+    plt.subplot(1, 3, 1)
+    plt.hist(widths, bins=50, color='blue', alpha=0.7)
+    plt.title('Distribution of Widths')
+
+    plt.subplot(1, 3, 2)
+    plt.hist(heights, bins=50, color='green', alpha=0.7)
+    plt.title('Distribution of Heights')
+
+    plt.subplot(1, 3, 3)
+    plt.hist(aspect_ratios, bins=50, color='red', alpha=0.7)
+    plt.title('Distribution of Aspect Ratios')
+
+    plt.tight_layout()
+    plt.show()
