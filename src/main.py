@@ -3,9 +3,10 @@ import os
 import torch
 from models.Models import CustomObjectDetector
 from utils.Datautil import visualize_sample, analyze_dataset
-from utils.Generalutil import create_results_directory
+from utils.Generalutil import create_results_directory, update_performance_tracker
 import json
 import pickle
+from inference.Inference import load_model
 
 
 def main(dataset_check=True):
@@ -24,53 +25,64 @@ def main(dataset_check=True):
     tr_ann_path = base_ann_path.format('train')
 
     # Create the folder to store the outputs of the training
-    result_path = create_results_directory(base_dir="results", training_dir="training")
-
-    train_ds_loader = ds.create_data_loader(tr_img_path, 'imagenet', task, tr_ann_path, 8, train=True)
-    print('Train data has been loaded and created: \n')
-    # ds.pixel_stats(train_ds_loader)
-
-    val_img_path = os.path.join(base_img_path, 'val')
-    val_ann_path = base_ann_path.format('val')
-
-    val_ds_loader = ds.create_data_loader(val_img_path, 'imagenet', task, val_ann_path, 8, train=False)
-    print('Validation data has been loaded and created: \n')
-
+    # result_path = create_results_directory(base_dir="results", training_dir="training")
+    #
+    # train_ds_loader = ds.create_data_loader(tr_img_path, 'imagenet', task, tr_ann_path, 8, train=True)
+    # print('Train data has been loaded and created: \n')
+    # # ds.pixel_stats(train_ds_loader)
+    #
+    # val_img_path = os.path.join(base_img_path, 'val')
+    # val_ann_path = base_ann_path.format('val')
+    #
+    # val_ds_loader = ds.create_data_loader(val_img_path, 'imagenet', task, val_ann_path, 8, train=False)
+    # print('Validation data has been loaded and created: \n')
+    #
     te_img_path = os.path.join(base_img_path, 'test')
     te_ann_path = base_ann_path.format('test')
 
     test_ds_loader = ds.create_data_loader(te_img_path, 'imagenet', task, te_ann_path, 8, train=False)
     print('Test data has been loaded and created: \n')
     # ds.pixel_stats(test_ds_loader)
+    #
+    # if dataset_check:
+    #     # Create some basic statistics to understand of the typical sizes and shapes of the
+    #     print('Calculating bbox statistics...')
+    #     analyze_dataset(tr_img_path, tr_ann_path)
+    #
+    #     # Visualize some input data to validate the training data
+    #     visualize_sample(val_ds_loader)
+    #
+    # # Initialize the model, optimizer, and train
+    # num_classes = 8
+    # detector = CustomObjectDetector(num_classes)
+    # params = [p for p in detector.model.parameters() if p.requires_grad]
+    # optimizer = torch.optim.SGD(params, lr=LR, momentum=LR_MOMENTUM, weight_decay=LR_DECAY_RATE)
+    #
+    # lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer,
+    #                                                step_size=LR_SCHED_STEP_SIZE,
+    #                                                gamma=LR_SCHED_GAMMA)
+    #
+    # train_metrics = detector.train_model(train_ds_loader, optimizer, lr_scheduler, num_epochs=1,
+    #                                      res_path=result_path, val_dataloader=val_ds_loader)
+    # # Save train/val dictionary as a JSON file
+    # with open(os.path.join(result_path, 'train_results/train_metrics.json'), 'w') as tr_json_file:
+    #     json.dump(train_metrics, tr_json_file)
+    #
+    # test_metrics = detector.evaluate_model('test', test_ds_loader)
+    # # Save test dictionary as a JSON file
+    # with open(os.path.join(result_path, 'test_results/test_metrics.json'), 'w') as te_json_file:
+    #     json.dump(test_metrics, te_json_file)
 
-    if dataset_check:
-        # Create some basic statistics to understand of the typical sizes and shapes of the
-        print('Calculating bbox statistics...')
-        analyze_dataset(tr_img_path, tr_ann_path)
+    # te_json_file_path = '../results/training/training_20231116_171842/test_results/test_metrics.json'
+    # result_path = '../results/training/training_20231116_171842'
+    # with open(te_json_file_path, 'r') as file:
+    #     te_json_file = json.load(file)
+    # update_performance_tracker(result_path, te_json_file)
 
-        # Visualize some input data to validate the training data
-        visualize_sample(val_ds_loader)
-
-    # Initialize the model, optimizer, and train
-    num_classes = 8
-    detector = CustomObjectDetector(num_classes)
-    params = [p for p in detector.model.parameters() if p.requires_grad]
-    optimizer = torch.optim.SGD(params, lr=LR, momentum=LR_MOMENTUM, weight_decay=LR_DECAY_RATE)
-
-    lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer,
-                                                   step_size=LR_SCHED_STEP_SIZE,
-                                                   gamma=LR_SCHED_GAMMA)
-
-    train_metrics = detector.train_model(train_ds_loader, optimizer, lr_scheduler, num_epochs=1,
-                                         res_path=result_path, val_dataloader=val_ds_loader)
-    # Save train/val dictionary as a JSON file
-    with open(os.path.join(result_path, 'train_results/train_metrics.json'), 'w') as tr_json_file:
-        json.dump(train_metrics, tr_json_file)
-
-    test_metrics = detector.evaluate_model('test', test_ds_loader)
-    # Save test dictionary as a JSON file
-    with open(os.path.join(result_path, 'test_results/test_metrics.json'), 'w') as te_json_file:
-        json.dump(test_metrics, te_json_file)
+    inference = True
+    if inference:
+        model = load_model('../results/training', num_classes=8)
+        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
 if __name__ == '__main__':
