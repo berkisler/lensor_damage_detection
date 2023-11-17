@@ -44,9 +44,6 @@ def main(dataset_check=True):
     tr_img_path = os.path.join(base_img_path, 'train')
     tr_ann_path = base_ann_path.format('train')
 
-    # Create the folder to store the outputs of the training
-    result_path = create_results_directory(base_dir="results", training_dir="training")
-
     train_ds_loader = ds.create_data_loader(tr_img_path, 'imagenet', task, tr_ann_path, 8, train=True)
     print('Train data has been loaded and created: \n')
     # # ds.pixel_stats(train_ds_loader)
@@ -75,6 +72,9 @@ def main(dataset_check=True):
     # Initialize the model, optimizer, and train
     num_classes = 8
     if training:
+        # Create the folder to store the outputs of the training
+        result_path = create_results_directory(base_dir="results", training_dir="training")
+
         detector = CustomObjectDetector(num_classes)
         params = [p for p in detector.model.parameters() if p.requires_grad]
         optimizer = torch.optim.SGD(params, lr=LR, momentum=LR_MOMENTUM, weight_decay=LR_DECAY_RATE)
@@ -99,8 +99,17 @@ def main(dataset_check=True):
         update_performance_tracker(result_path, te_json_file)
 
     if inference:
+        base_path = 'results/training/'
+        for entry in os.listdir(base_path):
+            model_path = os.path.join(base_path, entry)
+            if os.path.isdir(model_path):
+                metric_path = os.path.join(model_path, 'test_results/test_metrics.json')
+                with open(metric_path, 'r') as file:
+                    metric_data = json.load(file)
+                update_performance_tracker(model_path, metric_data)
+
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        model = load_model('../results/training', num_classes=8, device=device)
+        model = load_model('results/training', num_classes=8, device=device)
 
         test_results = run_test_inference(test_ds_loader, model, device)
 
