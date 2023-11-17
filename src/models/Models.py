@@ -15,7 +15,29 @@ def setup_logger():
 
 
 class CustomObjectDetector:
-    def __init__(self, num_classes, device=None):
+    """
+    A custom object detector class that encapsulates a PyTorch-based Faster R-CNN model for object detection tasks.
+
+    This class provides functionalities for initializing a Faster R-CNN model with a ResNet50 backbone pre-trained on
+    the COCO dataset. It includes methods for training the model, evaluating its performance, and running inference.
+    The class allows customization of the anchor generator in the Region Proposal Network (RPN) to adapt to different
+    object sizes and aspect ratios in the dataset.
+
+    Attributes:
+        model (torch.nn.Module): The Faster R-CNN model instance.
+        device (torch.device): The device (CPU or GPU) on which the model will be run.
+    """
+    def __init__(self, num_classes, device=None, infer=None, weight_path=None):
+        """
+        Initializes the CustomObjectDetector with a pre-trained Faster R-CNN model.
+
+        Args:
+            num_classes (int): The number of classes for object detection, including the background class.
+            device (torch.device, optional): The device (CPU or GPU) to run the model on. Defaults to GPU if available.
+            infer (bool, optional): Flag indicating if the model is being loaded for inference. Defaults to False.
+            weight_path (str, optional): Path to the pre-trained model weights, used for inference. Required if infer=True.
+
+        """
         # Initialize the logger
         setup_logger()
 
@@ -33,10 +55,18 @@ class CustomObjectDetector:
         aspect_ratios = ((0.5, 1.0, 2.0),) * len(anchor_sizes)
         self.model.rpn.anchor_generator = AnchorGenerator(sizes=anchor_sizes, aspect_ratios=aspect_ratios)
 
-        self.device = device if device else torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        if infer:
+            if weight_path:
+                self.model.load_state_dict(torch.load(os.path.join(weight_path), map_location=device))
+                self.model.eval()
+            else:
+                raise(ValueError('Path for the model weight is not defined!'))
 
-        # Move model to the specified device
-        self.model.to(self.device)
+        else:
+            self.device = device if device else torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+            # Move model to the specified device
+            self.model.to(self.device)
 
     def forward(self, images, targets=None):
         """

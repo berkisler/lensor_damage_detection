@@ -7,8 +7,14 @@ from utils.Datautil import custom_collate_fn, convert_coco_format_to_pascal_voc
 
 class CustomCocoDataset(CocoDetection):
     """
-    Custom dataset class for handling COCO format for both detection and segmentation.
-    """
+        A custom dataset class derived from PyTorch's CocoDetection class, tailored for handling both detection and
+        segmentation tasks using the COCO dataset format. It extends the standard COCO dataset functionality by
+        allowing custom transformations and handling different tasks like detection and segmentation.
+
+        Attributes:
+            task (str): Indicates the type of task ('detection' or 'segmentation').
+            transform (callable, optional): A function/transform that takes in an image and returns a transformed version.
+        """
 
     def __init__(self, root, ann_file, task='detection', transform=None):
         """
