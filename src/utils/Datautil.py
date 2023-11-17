@@ -53,6 +53,31 @@ def custom_collate_fn(batch):
     return torch.stack(images), targets
 
 
+def denormalize(tensor):
+    """
+    Denormalize a tensor image with mean and standard deviation.
+
+    Args:
+        tensor (torch.Tensor): The image tensor to be denormalized.
+        mean (list): The mean used for normalization.
+        std (list): The standard deviation used for normalization.
+
+    Returns:
+        torch.Tensor: Denormalized image tensor.
+    """
+    mean = [0.485, 0.456, 0.406]
+    std = [0.229, 0.224, 0.225]
+    if tensor.ndim == 3:  # Single image
+        mean = torch.tensor(mean).view(3, 1, 1)
+        std = torch.tensor(std).view(3, 1, 1)
+        tensor = tensor * std + mean
+    elif tensor.ndim == 4:  # Batch of images
+        mean = torch.tensor(mean).view(1, 3, 1, 1)
+        std = torch.tensor(std).view(1, 3, 1, 1)
+        tensor = tensor * std + mean
+    return tensor
+
+
 def pixel_stats(loader):
     """
     Calculate the mean and standard deviation of images in a dataset.
@@ -70,17 +95,6 @@ def pixel_stats(loader):
     - mean (Tensor): A tensor containing the mean value of each channel in the dataset.
     - std (Tensor): A tensor containing the standard deviation of each channel in the dataset.
 
-    Note:
-    - This function assumes that the images returned by the DataLoader are
-      PyTorch tensors with the channel order being (C, H, W) where C is the
-      number of channels, H is the height, and W is the width of the image.
-    - The function stacks the images in each batch to create a single tensor
-      per batch. This requires that all images in the batch have the same shape.
-    - The DataLoader should shuffle the data to ensure a representative
-      calculation of the mean and standard deviation if the dataset is too
-      large to process in one pass.
-    - If the dataset is normalized (e.g., pixel values range between 0 and 1),
-      the calculated mean and standard deviation will be in the same range.
     """
 
     mean = 0.
