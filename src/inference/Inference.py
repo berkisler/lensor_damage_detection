@@ -1,4 +1,3 @@
-import ipdb
 from utils.Generalutil import compare_models
 from utils.Datautil import denormalize
 from models.Models import CustomObjectDetector
