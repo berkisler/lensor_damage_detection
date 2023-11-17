@@ -2,7 +2,9 @@ import torch
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import torchvision.transforms.functional as F
+from torchvision.datasets import CocoDetection
 import itertools
+
 
 def convert_coco_format_to_pascal_voc(coco_boxes):
     """
@@ -51,6 +53,31 @@ def custom_collate_fn(batch):
     return torch.stack(images), targets
 
 
+def denormalize(tensor):
+    """
+    Denormalize a tensor image with mean and standard deviation.
+
+    Args:
+        tensor (torch.Tensor): The image tensor to be denormalized.
+        mean (list): The mean used for normalization.
+        std (list): The standard deviation used for normalization.
+
+    Returns:
+        torch.Tensor: Denormalized image tensor.
+    """
+    mean = [0.485, 0.456, 0.406]
+    std = [0.229, 0.224, 0.225]
+    if tensor.ndim == 3:  # Single image
+        mean = torch.tensor(mean).view(3, 1, 1)
+        std = torch.tensor(std).view(3, 1, 1)
+        tensor = tensor * std + mean
+    elif tensor.ndim == 4:  # Batch of images
+        mean = torch.tensor(mean).view(1, 3, 1, 1)
+        std = torch.tensor(std).view(1, 3, 1, 1)
+        tensor = tensor * std + mean
+    return tensor
+
+
 def pixel_stats(loader):
     """
     Calculate the mean and standard deviation of images in a dataset.
@@ -68,17 +95,6 @@ def pixel_stats(loader):
     - mean (Tensor): A tensor containing the mean value of each channel in the dataset.
     - std (Tensor): A tensor containing the standard deviation of each channel in the dataset.
 
-    Note:
-    - This function assumes that the images returned by the DataLoader are
-      PyTorch tensors with the channel order being (C, H, W) where C is the
-      number of channels, H is the height, and W is the width of the image.
-    - The function stacks the images in each batch to create a single tensor
-      per batch. This requires that all images in the batch have the same shape.
-    - The DataLoader should shuffle the data to ensure a representative
-      calculation of the mean and standard deviation if the dataset is too
-      large to process in one pass.
-    - If the dataset is normalized (e.g., pixel values range between 0 and 1),
-      the calculated mean and standard deviation will be in the same range.
     """
 
     mean = 0.
@@ -111,8 +127,11 @@ def visualize_sample(dataloader):
     """
     try:
         while True:
-            print("Looping... Press Ctrl+C to stop.")
+            print("\n Entering data check... type 'done' to stop.")
             idx = input('Provide the sample id: ')
+            if idx.lower() == 'done':
+                print('Exiting data check.')
+                return
             num_samples = len(dataloader.dataset)
             # Get a single batch from the dataloader
             if not idx:
@@ -132,6 +151,8 @@ def visualize_sample(dataloader):
             target = targets[0]  # Get the first target from the batch
             im_id = target['image_id']
             print(f'Image ID" {im_id}')
+            print(f"{type(image) = }\n{type(target) = }\n{target.keys() = }")
+            print(f"{type(target['boxes']) = }\n{type(target['labels']) = }")
 
             # Convert tensor to PIL Image if necessary
             if isinstance(image, torch.Tensor):
@@ -170,3 +191,55 @@ def visualize_sample(dataloader):
         print("Reached the end of the dataset.")
 
 
+def analyze_dataset(dataset_path, annotation_file):
+    """
+    Analyze the dataset to determine appropriate anchor sizes and aspect ratios.
+
+    Parameters:
+        dataset_path (str): Path to the dataset directory.
+        annotation_file (str): Path to the annotation file.
+
+    Returns:
+        A plot of the distribution of bounding box sizes and aspect ratios.
+    """
+    dataset = CocoDetection(root=dataset_path, annFile=annotation_file)
+
+    widths = []
+    heights = []
+    aspect_ratios = []
+    areas = []
+
+    for _, targets in dataset:
+        for target in targets:
+            bbox = target['bbox']
+            # COCO format: [xmin, ymin, width, height]
+            width = bbox[2]
+            height = bbox[3]
+            area = width * height
+
+            widths.append(width)
+            heights.append(height)
+            areas.append(area)
+            aspect_ratios.append(width / height if height > 0 else 0)
+
+    # Computing max and min areas
+    max_area, min_area = max(areas), min(areas)
+    print('max_area: ', max_area, 'min_area: ', min_area)
+
+    # Plotting
+    plt.figure(figsize=(12, 6))
+
+    plt.subplot(1, 3, 1)
+    plt.hist(widths, bins=50, color='blue', alpha=0.7)
+    plt.title('Distribution of Widths')
+
+    plt.subplot(1, 3, 2)
+    plt.hist(heights, bins=50, color='green', alpha=0.7)
+    plt.title('Distribution of Heights')
+
+    plt.subplot(1, 3, 3)
+    plt.hist(aspect_ratios, bins=50, color='red', alpha=0.7)
+    plt.title('Distribution of Aspect Ratios')
+
+    plt.tight_layout()
+    plt.show()

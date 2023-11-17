@@ -2,10 +2,12 @@ import logging
 from collections import defaultdict
 import torch
 import torchvision
+from torchvision.models.detection.rpn import AnchorGenerator
 from tqdm import tqdm
 from utils.Modelutil import calculate_metrics, tensor_to_list, save_best_model
-import ipdb
+import os
 import numpy as np
+
 
 
 def setup_logger():
@@ -13,7 +15,29 @@ def setup_logger():
 
 
 class CustomObjectDetector:
-    def __init__(self, num_classes, device=None):
+    """
+    A custom object detector class that encapsulates a PyTorch-based Faster R-CNN model for object detection tasks.
+
+    This class provides functionalities for initializing a Faster R-CNN model with a ResNet50 backbone pre-trained on
+    the COCO dataset. It includes methods for training the model, evaluating its performance, and running inference.
+    The class allows customization of the anchor generator in the Region Proposal Network (RPN) to adapt to different
+    object sizes and aspect ratios in the dataset.
+
+    Attributes:
+        model (torch.nn.Module): The Faster R-CNN model instance.
+        device (torch.device): The device (CPU or GPU) on which the model will be run.
+    """
+    def __init__(self, num_classes, device=None, infer=None, weight_path=None):
+        """
+        Initializes the CustomObjectDetector with a pre-trained Faster R-CNN model.
+
+        Args:
+            num_classes (int): The number of classes for object detection, including the background class.
+            device (torch.device, optional): The device (CPU or GPU) to run the model on. Defaults to GPU if available.
+            infer (bool, optional): Flag indicating if the model is being loaded for inference. Defaults to False.
+            weight_path (str, optional): Path to the pre-trained model weights, used for inference. Required if infer=True.
+
+        """
         # Initialize the logger
         setup_logger()
 
@@ -26,10 +50,23 @@ class CustomObjectDetector:
         self.model.roi_heads.box_predictor = torchvision.models.detection.faster_rcnn.FastRCNNPredictor(in_features,
                                                                                                         num_classes + 1)
 
-        self.device = device if device else torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        # # Create a custom anchor generator for the RPN
+        anchor_sizes = ((8,), (16,), (32,), (64,), (128,))  # Adjust as needed
+        aspect_ratios = ((0.5, 1.0, 2.0),) * len(anchor_sizes)
+        self.model.rpn.anchor_generator = AnchorGenerator(sizes=anchor_sizes, aspect_ratios=aspect_ratios)
 
-        # Move model to the specified device
-        self.model.to(self.device)
+        if infer:
+            if weight_path:
+                self.model.load_state_dict(torch.load(os.path.join(weight_path), map_location=device))
+                self.model.eval()
+            else:
+                raise(ValueError('Path for the model weight is not defined!'))
+
+        else:
+            self.device = device if device else torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+            # Move model to the specified device
+            self.model.to(self.device)
 
     def forward(self, images, targets=None):
         """
@@ -109,7 +146,7 @@ class CustomObjectDetector:
 
         return eval_metrics
 
-    def train_model(self, dataloader, optimizer, lr_scheduler, num_epochs, val_dataloader=None):
+    def train_model(self, dataloader, optimizer, lr_scheduler, num_epochs, res_path, val_dataloader=None):
 
         """
         Trains the model, with an option to validate.
@@ -119,10 +156,10 @@ class CustomObjectDetector:
             optimizer (Optimizer): Optimizer for the model.
             lr_scheduler (lr_scheduler): Learning rate scheduler for the model
             num_epochs (int): Number of epochs to train.
+            res_path (str): The path to save the model weights
             val_dataloader (DataLoader, optional): Dataloader for the validation data.
         """
         logging.info('<<<<<<<<<<Training started>>>>>>>>>>')
-        eval_metrics = self.evaluate_model('val', val_dataloader)
         all_metrics = defaultdict(dict)
         best_val_loss = float('inf')  # Initialize with a large number for loss minimization
 
@@ -186,8 +223,11 @@ class CustomObjectDetector:
 
                 all_metrics[f'epoch_{epoch}']['val'] = eval_metrics
 
+            # Calculate the mean loss on eval set to track best performing model
             val_loss = np.mean(eval_metrics['val_loss'])
+
             # Save model if it's the best so far
-            best_val_loss = save_best_model(self.model, val_loss, best_val_loss, filename='best_model.pth', mode='min')
+            file_path = os.path.join(res_path, 'model_weights/best_model.pth')
+            best_val_loss = save_best_model(self.model, val_loss, best_val_loss, filename=file_path, mode='min')
 
         return all_metrics

@@ -89,7 +89,7 @@ def tensor_to_list(obj, ids):
         return obj
 
 
-def calculate_metrics(targets, outputs, iou_threshold=0.5):
+def calculate_metrics(targets, outputs, iou_threshold=0.4):
     """
     Calculates object detection metrics such as precision, recall, and F1 score.
 
