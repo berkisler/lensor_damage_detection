@@ -38,7 +38,7 @@ def main(dataset_check=True):
     base_ann_path = 'vehicle_damage_detection_dataset/annotations/instances_{}.json'
     task = 'detection'
 
-    training = True
+    training = False
     inference = True
 
     tr_img_path = os.path.join(base_img_path, 'train')
@@ -67,7 +67,7 @@ def main(dataset_check=True):
         analyze_dataset(tr_img_path, tr_ann_path)
 
         # Visualize some input data to validate the training data
-        visualize_sample(val_ds_loader)
+        visualize_sample(test_ds_loader)
 
     # Initialize the model, optimizer, and train
     num_classes = 8
